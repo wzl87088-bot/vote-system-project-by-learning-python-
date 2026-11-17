@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>老师信息</title>
+</head>
+<body>
+    <form id="csrf-form" hidden>
+        {% csrf_token %}
+    </form>
+    <h1>{{ subject.name }}学科的老师</h1>
+
+    {% if not teachers %}
+        <p>暂无该学科老师信息</p>
+    {% endif %}
+
+    {% for teacher in teachers %}
+        <h2>{{ teacher.name }}</h2>
+        <img src="/static/images/teacher.jpg" alt="老师照片" width="140">
+        <p>{{ teacher.intro }}</p>
+        <button type="button" class="vote-button"
+                data-url="/praise/" data-tno="{{ teacher.no }}">
+            好评（<span>{{ teacher.good_count }}</span>）
+        </button>
+
+        <button type="button" class="vote-button"
+                data-url="/criticize/" data-tno="{{ teacher.no }}">
+            差评（<span>{{ teacher.bad_count }}</span>）
+        </button>
+    {% endfor %}
+
+    <a href="/">返回首页</a>
+    <script>
+    const csrfToken = document.querySelector(
+        '#csrf-form input[name="csrfmiddlewaretoken"]'
+    ).value;
+
+    document.querySelectorAll('.vote-button').forEach(button => {
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+
+            try {
+                const response = await fetch(button.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: new URLSearchParams({
+                        tno: button.dataset.tno
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.code === 20000) {
+                    button.querySelector('span').textContent = data.count;
+                } else {
+                    alert(data.mesg || '投票失败');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('请求失败，请检查服务器和浏览器控制台');
+            } finally {
+                button.disabled = false;
+            }
+        });
+    });
+</script>
+</body>
+</html>
